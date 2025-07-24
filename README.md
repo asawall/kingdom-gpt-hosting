@@ -1,21 +1,46 @@
-MIT License
+# kingdom-gpt-hosting
 
-Copyright (c) 2025 Andreas Sawall
+**Produktivsystem für dein KI-Dashboard und GPU-Backend**  
+Alle Konfigurationsdaten und Komponenten sind ECHT und sofort einsetzbar.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+## Features (Auszug)
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+- User-Login & Multi-User-Management (inkl. Admin)
+- Modell-Upload/Registrierung und Steuerung im Dashboard
+- GPU-Server (Ollama, Bild/Audio/Video) steuerbar
+- Nextcloud-Integration (Dateiablage, Vorschau, Sharing)
+- Digistore24-Lizenzverwaltung
+- API-Management
+- Responsive, modernes Design (Next.js, Tailwind, Material-UI)
+- Healthchecks, Log- und Systemmonitoring
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+## Quickstart (Installations-Guide)
+
+1. **Repo klonen und Umgebungsvariablen setzen**
+    ```bash
+    git clone git@github.com:kingdom-hosting/kingdom-gpt-hosting.git
+    cd kingdom-gpt-hosting
+    cp .env .env.local # falls benötigt
+    ```
+
+2. **Terraform Infrastruktur (lokal, falls Cloud-Provisionierung)**
+    ```bash
+    cd terraform
+    terraform init
+    terraform apply
+    ```
+
+3. **Ansible Playbook auf beiden Servern ausführen**
+    ```bash
+    cd ../ansible
+    ansible-playbook -i inventories/production site.yml
+    ```
+
+4. **Dashboard im Browser öffnen**
+    - https://dashboard.kingdom-hosting.de
+    - Admin-User einrichten, Digistore24-Key im Admin-Bereich nachtragen
+
+## Support
+
+Für alle produktiven Zugangsdaten siehe `.env`.  
+Bei Problemen: [docs/SUPPORT.md](docs/SUPPORT.md)

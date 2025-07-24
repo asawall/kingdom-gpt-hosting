@@ -1,0 +1,8 @@
+all:
+  hosts:
+    ex101:
+      ansible_host: 167.235.183.61
+      ansible_user: root
+    gpu01:
+      ansible_host: 136.243.78.14
+      ansible_user: root

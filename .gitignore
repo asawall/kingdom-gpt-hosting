@@ -1,0 +1,8 @@
+*.log
+*.env
+__pycache__/
+.terraform/
+ansible/.vault_pass
+dashboard-ui/.next/
+dashboard-ui/node_modules/
+api-integrations/digistore24/.venv/

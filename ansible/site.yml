@@ -1,0 +1,25 @@
+- name: GPT-Stack bereitstellen (Common)
+  hosts: all
+  become: true
+  roles:
+    - common
+
+- name: ex101 konfigurieren
+  hosts: ex101
+  become: true
+  roles:
+    - apache
+    - mariadb
+    - nextcloud
+    - dashboard
+    - digistore24
+
+- name: gpu01 konfigurieren
+  hosts: gpu01
+  become: true
+  roles:
+    - nvidia
+    - ollama
+    - ollama-models
+    - gpu-services
+    - firewall

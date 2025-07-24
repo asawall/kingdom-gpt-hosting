@@ -1,0 +1,8 @@
+- name: Lade GPT-Modelle vor
+  shell: |
+    ollama pull mistral
+    ollama pull phi
+    ollama pull llama3
+    ollama pull gemma
+    ollama pull neural-chat
+  become_user: root

@@ -1,0 +1,10 @@
+- name: Nextcloud herunterladen
+  get_url:
+    url: https://download.nextcloud.com/server/releases/nextcloud-28.0.4.zip
+    dest: /opt/gpt/nextcloud/nextcloud.zip
+
+- name: Nextcloud entpacken
+  unarchive:
+    src: /opt/gpt/nextcloud/nextcloud.zip
+    dest: /opt/gpt/nextcloud/
+    remote_src: yes

@@ -1,0 +1,11 @@
+- name: Installiere Ollama
+  shell: |
+    curl -fsSL https://ollama.com/install.sh | sh
+  args:
+    creates: /usr/bin/ollama
+
+- name: Ollama Service starten
+  systemd:
+    name: ollama
+    enabled: yes
+    state: started
