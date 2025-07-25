@@ -1,0 +1,159 @@
+#!/bin/bash
+
+set -e
+
+# Produktive .env
+cat > .env <<EOF
+# === System & Domain ===
+DASHBOARD_DOMAIN=dashboard.kingdom-hosting.de
+
+# === Server-IPs ===
+EX101_IP=167.235.183.61
+GPU01_IP=136.243.78.14
+
+# === SSH Schluessel ===
+SSH_PUBLIC_KEY="ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICVQcNlHdSf1syUSK71tiOzWXx5IP5Qg5t4bkzWrRb5z andysawall@gmail.com"
+GITHUB_SSH_PUBLIC_KEY="ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEOvwuA6Lj2UIyeqBvxvmPVBLt049lthVaM/wwNXACHp andreas@kingdom-hosting.de"
+
+# === GitHub Token ===
+GITHUB_PERSONAL_TOKEN=
+
+# === MariaDB auf EX101 ===
+DB_HOST=localhost
+DB_NAME=c1dashboard
+DB_USER=c1dashboard
+DB_PASSWORD=e04122126S#
+
+# === Nextcloud ===
+NEXTCLOUD_ADMIN=admin
+NEXTCLOUD_PASSWORD=changeme
+NEXTCLOUD_PATH=/opt/gpt/nextcloud
+NEXTCLOUD_URL=https://dashboard.kingdom-hosting.de/nextcloud
+
+# === Ollama (GPU-Server) ===
+OLLAMA_API_URL=http://136.243.78.14:11434/api
+
+# === Digistore24 ===
+DIGISTORE_API_KEY=live_xxx
+DIGISTORE_WEBHOOK_URL=https://dashboard.kingdom-hosting.de/api/digistore24/webhook
+
+# === SadTalker / Huggingface ===
+SADTALKER_TOKEN=fbLCLmJFGjPpqSqTyvXvjvqWxSDHRmEQcP
+EOF
+
+# LICENSE (falls noch nicht vorhanden)
+cat > LICENSE <<EOF
+MIT License
+
+Copyright (c) 2025 Andreas Sawall
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+EOF
+
+# .gitignore
+cat > .gitignore <<EOF
+*.log
+*.env
+__pycache__/
+.terraform/
+ansible/.vault_pass
+dashboard-ui/.next/
+dashboard-ui/node_modules/
+api-integrations/digistore24/.venv/
+EOF
+
+# README.md
+cat > README.md <<EOF
+# kingdom-gpt-hosting
+
+**Produktivsystem für dein KI-Dashboard und GPU-Backend**  
+Alle Konfigurationsdaten und Komponenten sind ECHT und sofort einsetzbar.
+
+## Features (Auszug)
+
+- User-Login & Multi-User-Management (inkl. Admin)
+- Modell-Upload/Registrierung und Steuerung im Dashboard
+- GPU-Server (Ollama, Bild/Audio/Video) steuerbar
+- Nextcloud-Integration (Dateiablage, Vorschau, Sharing)
+- Digistore24-Lizenzverwaltung
+- API-Management
+- Responsive, modernes Design (Next.js, Tailwind, Material-UI)
+- Healthchecks, Log- und Systemmonitoring
+
+## Quickstart (Installations-Guide)
+
+1. **Repo klonen und Umgebungsvariablen setzen**
+    \`\`\`bash
+    git clone git@github.com:kingdom-hosting/kingdom-gpt-hosting.git
+    cd kingdom-gpt-hosting
+    cp .env .env.local # falls benötigt
+    \`\`\`
+
+2. **Terraform Infrastruktur (lokal, falls Cloud-Provisionierung)**
+    \`\`\`bash
+    cd terraform
+    terraform init
+    terraform apply
+    \`\`\`
+
+3. **Ansible Playbook auf beiden Servern ausführen**
+    \`\`\`bash
+    cd ../ansible
+    ansible-playbook -i inventories/production site.yml
+    \`\`\`
+
+4. **Dashboard im Browser öffnen**
+    - https://dashboard.kingdom-hosting.de
+    - Admin-User einrichten, Digistore24-Key im Admin-Bereich nachtragen
+
+## Support
+
+Für alle produktiven Zugangsdaten siehe \`.env\`.  
+Bei Problemen: [docs/SUPPORT.md](docs/SUPPORT.md)
+EOF
+
+# INSTALLATION.md
+mkdir -p docs
+cat > docs/INSTALLATION.md <<EOF
+# Kingdom GPT Hosting – Installationsanleitung
+
+Diese Anleitung richtet sich an Betreiber und Admins, die das System mit den produktiven Einstellungen ausrollen wollen. Du brauchst KEINE Einzeldateien manuell zu erstellen – alles ist als Repo vorbereitet und automatisiert!
+
+...
+
+**FERTIG! Dein System ist jetzt produktiv nutzbar.**
+EOF
+
+# SUPPORT.md
+cat > docs/SUPPORT.md <<EOF
+# Support & FAQ (kingdom-gpt-hosting)
+
+**Dashboard nicht erreichbar:**  
+- Prüfe SSL/TLS und Apache Proxy auf ex101.
+- Healthcheck: \`systemctl status dashboard\`
+
+**GPU-Modelle nicht sichtbar / Fehler 502:**  
+- Prüfe auf gpu01: \`systemctl status ollama\`  
+- Modelle ggf. manuell per \`ollama pull <modell>\` laden
+
+**Nextcloud-Fehler:**  
+- Log: \`/opt/gpt/nextcloud/data/nextcloud.log\`
+
+**Digistore24:**  
+- Webhook-Logs in \`api-integrations/digistore24

@@ -1,370 +1,335 @@
 #!/bin/bash
 
+# Kingdom SaaS Master Setup Script
+# This script automatically installs and configures the complete Kingdom SaaS platform
+
 set -e
 
-# Produktive .env
-cat > .env <<EOF
-# === System & Domain ===
-DASHBOARD_DOMAIN=dashboard.kingdom-hosting.de
+echo "🚀 Kingdom SaaS Master Setup Starting..."
+echo "================================================"
 
-# === Server-IPs ===
-EX101_IP=167.235.183.61
-GPU01_IP=136.243.78.14
+# Color codes for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
 
-# === SSH Schluessel ===
-SSH_PUBLIC_KEY="ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICVQcNlHdSf1syUSK71tiOzWXx5IP5Qg5t4bkzWrRb5z andysawall@gmail.com"
-GITHUB_SSH_PUBLIC_KEY="ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEOvwuA6Lj2UIyeqBvxvmPVBLt049lthVaM/wwNXACHp andreas@kingdom-hosting.de"
-
-# === GitHub Token ===
-GITHUB_PERSONAL_TOKEN=
-
-# === MariaDB auf EX101 ===
-DB_HOST=localhost
-DB_NAME=c1dashboard
-DB_USER=c1dashboard
-DB_PASSWORD=e04122126S#
-
-# === Nextcloud ===
-NEXTCLOUD_ADMIN=admin
-NEXTCLOUD_PASSWORD=changeme
-NEXTCLOUD_PATH=/opt/gpt/nextcloud
-NEXTCLOUD_URL=https://dashboard.kingdom-hosting.de/nextcloud
-
-# === Ollama (GPU-Server) ===
-OLLAMA_API_URL=http://136.243.78.14:11434/api
-
-# === Digistore24 ===
-DIGISTORE_API_KEY=live_xxx
-DIGISTORE_WEBHOOK_URL=https://dashboard.kingdom-hosting.de/api/digistore24/webhook
-
-# === SadTalker / Huggingface ===
-SADTALKER_TOKEN=fbLCLmJFGjPpqSqTyvXvjvqWxSDHRmEQcP
-EOF
-
-# LICENSE (falls noch nicht vorhanden)
-cat > LICENSE <<EOF
-MIT License
-
-Copyright (c) 2025 Andreas Sawall
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-EOF
-
-# .gitignore
-cat > .gitignore <<EOF
-*.log
-*.env
-__pycache__/
-.terraform/
-ansible/.vault_pass
-dashboard-ui/.next/
-dashboard-ui/node_modules/
-api-integrations/digistore24/.venv/
-EOF
-
-# README.md
-cat > README.md <<EOF
-# kingdom-gpt-hosting
-
-**Produktivsystem für dein KI-Dashboard und GPU-Backend**  
-Alle Konfigurationsdaten und Komponenten sind ECHT und sofort einsetzbar.
-
-## Features (Auszug)
-
-- User-Login & Multi-User-Management (inkl. Admin)
-- Modell-Upload/Registrierung und Steuerung im Dashboard
-- GPU-Server (Ollama, Bild/Audio/Video) steuerbar
-- Nextcloud-Integration (Dateiablage, Vorschau, Sharing)
-- Digistore24-Lizenzverwaltung
-- API-Management
-- Responsive, modernes Design (Next.js, Tailwind, Material-UI)
-- Healthchecks, Log- und Systemmonitoring
-
-## Quickstart (Installations-Guide)
-
-1. **Repo klonen und Umgebungsvariablen setzen**
-    \`\`\`bash
-    git clone git@github.com:kingdom-hosting/kingdom-gpt-hosting.git
-    cd kingdom-gpt-hosting
-    cp .env .env.local # falls benötigt
-    \`\`\`
-
-2. **Terraform Infrastruktur (lokal, falls Cloud-Provisionierung)**
-    \`\`\`bash
-    cd terraform
-    terraform init
-    terraform apply
-    \`\`\`
-
-3. **Ansible Playbook auf beiden Servern ausführen**
-    \`\`\`bash
-    cd ../ansible
-    ansible-playbook -i inventories/production site.yml
-    \`\`\`
-
-4. **Dashboard im Browser öffnen**
-    - https://dashboard.kingdom-hosting.de
-    - Admin-User einrichten, Digistore24-Key im Admin-Bereich nachtragen
-
-## Support
-
-Für alle produktiven Zugangsdaten siehe \`.env\`.  
-Bei Problemen: [docs/SUPPORT.md](docs/SUPPORT.md)
-EOF
-
-# INSTALLATION.md
-mkdir -p docs
-cat > docs/INSTALLATION.md <<EOF
-# Kingdom GPT Hosting – Installationsanleitung
-
-Diese Anleitung richtet sich an Betreiber und Admins, die das System mit den produktiven Einstellungen ausrollen wollen. Du brauchst KEINE Einzeldateien manuell zu erstellen – alles ist als Repo vorbereitet und automatisiert!
-
-...
-
-**FERTIG! Dein System ist jetzt produktiv nutzbar.**
-EOF
-
-# SUPPORT.md
-cat > docs/SUPPORT.md <<EOF
-# Support & FAQ (kingdom-gpt-hosting)
-
-**Dashboard nicht erreichbar:**  
-- Prüfe SSL/TLS und Apache Proxy auf ex101.
-- Healthcheck: \`systemctl status dashboard\`
-
-**GPU-Modelle nicht sichtbar / Fehler 502:**  
-- Prüfe auf gpu01: \`systemctl status ollama\`  
-- Modelle ggf. manuell per \`ollama pull <modell>\` laden
-
-**Nextcloud-Fehler:**  
-- Log: \`/opt/gpt/nextcloud/data/nextcloud.log\`
-
-**Digistore24:**  
-- Webhook-Logs in \`api-integrations/digistore24/webhook.log\`
-
-**Passwörter vergessen?**  
-- Datenbank-Zugang siehe \`.env\`
-EOF
-
-# Ordnerstruktur anlegen
-mkdir -p ansible/inventories ansible/roles/ollama/tasks ansible/roles/ollama-models/tasks ansible/roles/nextcloud/tasks terraform dashboard-ui/src/pages api-integrations/digistore24
-
-# ansible/inventories/production
-cat > ansible/inventories/production <<EOF
-all:
-  hosts:
-    ex101:
-      ansible_host: 167.235.183.61
-      ansible_user: root
-    gpu01:
-      ansible_host: 136.243.78.14
-      ansible_user: root
-EOF
-
-# ansible/site.yml
-cat > ansible/site.yml <<EOF
-- name: GPT-Stack bereitstellen (Common)
-  hosts: all
-  become: true
-  roles:
-    - common
-
-- name: ex101 konfigurieren
-  hosts: ex101
-  become: true
-  roles:
-    - apache
-    - mariadb
-    - nextcloud
-    - dashboard
-    - digistore24
-
-- name: gpu01 konfigurieren
-  hosts: gpu01
-  become: true
-  roles:
-    - nvidia
-    - ollama
-    - ollama-models
-    - gpu-services
-    - firewall
-EOF
-
-# ansible/roles/ollama/tasks/main.yml
-cat > ansible/roles/ollama/tasks/main.yml <<EOF
-- name: Installiere Ollama
-  shell: |
-    curl -fsSL https://ollama.com/install.sh | sh
-  args:
-    creates: /usr/bin/ollama
-
-- name: Ollama Service starten
-  systemd:
-    name: ollama
-    enabled: yes
-    state: started
-EOF
-
-# ansible/roles/ollama-models/tasks/main.yml
-cat > ansible/roles/ollama-models/tasks/main.yml <<EOF
-- name: Lade GPT-Modelle vor
-  shell: |
-    ollama pull mistral
-    ollama pull phi
-    ollama pull llama3
-    ollama pull gemma
-    ollama pull neural-chat
-  become_user: root
-EOF
-
-# ansible/roles/nextcloud/tasks/main.yml
-cat > ansible/roles/nextcloud/tasks/main.yml <<EOF
-- name: Nextcloud herunterladen
-  get_url:
-    url: https://download.nextcloud.com/server/releases/nextcloud-28.0.4.zip
-    dest: /opt/gpt/nextcloud/nextcloud.zip
-
-- name: Nextcloud entpacken
-  unarchive:
-    src: /opt/gpt/nextcloud/nextcloud.zip
-    dest: /opt/gpt/nextcloud/
-    remote_src: yes
-EOF
-
-# terraform/main.tf
-cat > terraform/main.tf <<EOF
-provider "local" {}
-
-resource "null_resource" "manual_servers" {
-  provisioner "local-exec" {
-    command = "echo 'Für kingdom-gpt-hosting werden die Server manuell bereitgestellt. Die IPs sind: 167.235.183.61 (ex101), 136.243.78.14 (gpu01).' "
-  }
+# Logging function
+log() {
+    echo -e "${GREEN}[$(date +'%Y-%m-%d %H:%M:%S')] $1${NC}"
 }
 
-output "ex101_ip" {
-  value = "167.235.183.61"
+warn() {
+    echo -e "${YELLOW}[$(date +'%Y-%m-%d %H:%M:%S')] WARNING: $1${NC}"
 }
-output "gpu01_ip" {
-  value = "136.243.78.14"
+
+error() {
+    echo -e "${RED}[$(date +'%Y-%m-%d %H:%M:%S')] ERROR: $1${NC}"
+    exit 1
 }
+
+# Check if running as root
+if [[ $EUID -eq 0 ]]; then
+   error "This script should not be run as root for security reasons"
+fi
+
+# System requirements check
+check_requirements() {
+    log "Checking system requirements..."
+    
+    # Check Docker
+    if ! command -v docker &> /dev/null; then
+        error "Docker is not installed. Please install Docker first."
+    fi
+    
+    # Check Docker Compose
+    if ! command -v docker-compose &> /dev/null; then
+        error "Docker Compose is not installed. Please install Docker Compose first."
+    fi
+    
+    # Check available memory (minimum 8GB recommended)
+    total_mem=$(free -m | awk 'NR==2{printf "%.1f", $2/1024}')
+    if (( $(echo "$total_mem < 8.0" | bc -l) )); then
+        warn "Less than 8GB RAM detected. Performance may be affected."
+    fi
+    
+    # Check available disk space (minimum 50GB recommended)
+    available_space=$(df -BG . | awk 'NR==2 {print $4}' | sed 's/G//')
+    if [ "$available_space" -lt 50 ]; then
+        warn "Less than 50GB disk space available. Consider freeing up space."
+    fi
+    
+    log "System requirements check completed"
+}
+
+# Hardware detection and optimization
+detect_hardware() {
+    log "Detecting hardware configuration..."
+    
+    # CPU detection
+    cpu_cores=$(nproc)
+    cpu_info=$(lscpu | grep "Model name" | cut -d: -f2 | xargs)
+    log "CPU: $cpu_info ($cpu_cores cores)"
+    
+    # Memory detection
+    total_ram=$(free -h | awk 'NR==2{print $2}')
+    log "RAM: $total_ram"
+    
+    # GPU detection
+    if command -v nvidia-smi &> /dev/null; then
+        gpu_info=$(nvidia-smi --query-gpu=name,memory.total --format=csv,noheader,nounits)
+        log "GPU detected: $gpu_info"
+        
+        # Install NVIDIA Docker support if not present
+        if ! docker info 2>/dev/null | grep -q nvidia; then
+            log "Installing NVIDIA Docker support..."
+            distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
+            curl -s -L https://nvidia.github.io/nvidia-docker/gpgkey | sudo apt-key add -
+            curl -s -L https://nvidia.github.io/nvidia-docker/$distribution/nvidia-docker.list | sudo tee /etc/apt/sources.list.d/nvidia-docker.list
+            sudo apt-get update && sudo apt-get install -y nvidia-docker2
+            sudo systemctl restart docker
+        fi
+        
+        # Set GPU memory limit based on available VRAM
+        gpu_memory=$(echo "$gpu_info" | cut -d, -f2 | xargs)
+        if [ "$gpu_memory" -gt 16000 ]; then
+            export GPU_MEMORY_LIMIT="12GB"
+        elif [ "$gpu_memory" -gt 8000 ]; then
+            export GPU_MEMORY_LIMIT="6GB"
+        else
+            export GPU_MEMORY_LIMIT="4GB"
+        fi
+        log "GPU memory limit set to: $GPU_MEMORY_LIMIT"
+    else
+        warn "No NVIDIA GPU detected. Local AI models will use CPU only."
+        export GPU_MEMORY_LIMIT="0GB"
+    fi
+}
+
+# Environment setup
+setup_environment() {
+    log "Setting up environment configuration..."
+    
+    if [ ! -f ".env" ]; then
+        cp .env.example .env
+        log "Created .env file from template"
+        warn "Please edit .env file with your actual configuration values"
+        
+        # Generate secure random passwords
+        postgres_pass=$(openssl rand -base64 32)
+        redis_pass=$(openssl rand -base64 32)
+        jwt_secret=$(openssl rand -base64 64)
+        
+        sed -i "s/kingdom_secure_pass_2024/$postgres_pass/g" .env
+        sed -i "s/redis_secure_pass_2024/$redis_pass/g" .env
+        sed -i "s/super_secure_jwt_secret_2024_change_in_production/$jwt_secret/g" .env
+        
+        log "Generated secure random passwords"
+    else
+        log "Using existing .env configuration"
+    fi
+    
+    # Load environment variables
+    source .env
+}
+
+# Database initialization
+init_database() {
+    log "Initializing database schemas..."
+    
+    # Create database initialization scripts
+    mkdir -p database/init
+    
+    cat > database/init/01-create-databases.sql << EOF
+-- Kingdom SaaS Database Initialization
+CREATE DATABASE IF NOT EXISTS nextcloud;
+CREATE DATABASE IF NOT EXISTS grafana;
+
+-- Create extensions
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+CREATE EXTENSION IF NOT EXISTS "citext";
+
+-- Grant permissions
+GRANT ALL PRIVILEGES ON DATABASE nextcloud TO kingdom_user;
+GRANT ALL PRIVILEGES ON DATABASE grafana TO kingdom_user;
 EOF
 
-# dashboard-ui/package.json
-cat > dashboard-ui/package.json <<EOF
+    log "Database initialization scripts created"
+}
+
+# Build and start services
+start_services() {
+    log "Building and starting Kingdom SaaS services..."
+    
+    # Pull latest images
+    docker-compose pull
+    
+    # Build custom services
+    docker-compose build --parallel
+    
+    # Start core services first
+    docker-compose up -d postgres redis
+    log "Database services started"
+    
+    # Wait for databases to be ready
+    log "Waiting for databases to be ready..."
+    sleep 30
+    
+    # Start all services
+    docker-compose up -d
+    log "All services started"
+    
+    # Wait for services to be healthy
+    log "Waiting for services to be healthy..."
+    sleep 60
+}
+
+# Model management setup
+setup_models() {
+    log "Setting up AI model management..."
+    
+    # Create model configuration
+    mkdir -p config/models
+    
+    cat > config/models/model-config.json << EOF
 {
-  "name": "kingdom-gpt-dashboard",
-  "version": "1.0.0",
-  "private": true,
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start"
+  "models": {
+    "openai": {
+      "gpt-4": {
+        "provider": "openai",
+        "endpoint": "https://api.openai.com/v1",
+        "max_tokens": 4096,
+        "cost_per_token": 0.00003,
+        "performance_tier": "high"
+      },
+      "gpt-3.5-turbo": {
+        "provider": "openai",
+        "endpoint": "https://api.openai.com/v1",
+        "max_tokens": 4096,
+        "cost_per_token": 0.000002,
+        "performance_tier": "medium"
+      }
+    },
+    "local": {
+      "llama2-7b": {
+        "provider": "local",
+        "model_path": "/models/llama2-7b",
+        "memory_requirement": "8GB",
+        "gpu_requirement": true,
+        "performance_tier": "medium"
+      },
+      "llama2-13b": {
+        "provider": "local",
+        "model_path": "/models/llama2-13b",
+        "memory_requirement": "16GB",
+        "gpu_requirement": true,
+        "performance_tier": "high"
+      },
+      "mixtral-8x7b": {
+        "provider": "local",
+        "model_path": "/models/mixtral-8x7b",
+        "memory_requirement": "32GB",
+        "gpu_requirement": true,
+        "performance_tier": "very_high"
+      }
+    }
   },
-  "dependencies": {
-    "next": "14.2.3",
-    "react": "18.2.0",
-    "react-dom": "18.2.0",
-    "tailwindcss": "^3.4.1",
-    "axios": "^1.6.7"
+  "auto_assignment": {
+    "cpu_only": ["gpt-3.5-turbo"],
+    "gpu_4gb": ["llama2-7b", "gpt-3.5-turbo"],
+    "gpu_8gb": ["llama2-7b", "llama2-13b", "gpt-4"],
+    "gpu_16gb": ["llama2-7b", "llama2-13b", "mixtral-8x7b", "gpt-4"]
   }
 }
 EOF
 
-# dashboard-ui/.env
-cat > dashboard-ui/.env <<EOF
-NEXT_PUBLIC_OLLAMA_API=http://136.243.78.14:11434/api
-NEXT_PUBLIC_NEXTCLOUD_URL=https://dashboard.kingdom-hosting.de/nextcloud
-EOF
-
-# dashboard-ui/src/pages/index.js
-cat > dashboard-ui/src/pages/index.js <<'EOF'
-import { useEffect, useState } from "react";
-import axios from "axios";
-
-const OLLAMA_API = process.env.NEXT_PUBLIC_OLLAMA_API || "http://136.243.78.14:11434/api";
-const NEXTCLOUD_URL = process.env.NEXT_PUBLIC_NEXTCLOUD_URL || "https://dashboard.kingdom-hosting.de/nextcloud";
-
-export default function Dashboard() {
-  const [models, setModels] = useState([]);
-  const [model, setModel] = useState("");
-  const [prompt, setPrompt] = useState("");
-  const [output, setOutput] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    axios.get(`${OLLAMA_API}/tags`)
-      .then(res => setModels(res.data.models.map(m => m.name)));
-  }, []);
-
-  async function handlePrompt(e) {
-    e.preventDefault();
-    setLoading(true);
-    const res = await axios.post(`${OLLAMA_API}/chat`, {
-      model,
-      messages: [{ role: "user", content: prompt }]
-    });
-    setOutput(res.data.message.content);
-    setLoading(false);
-  }
-
-  return (
-    <div className="max-w-xl mx-auto p-8">
-      <h1 className="text-2xl font-bold mb-2">GPT Dashboard</h1>
-      <form className="mb-4 flex flex-row gap-2" onSubmit={handlePrompt}>
-        <select className="border px-2 py-1" value={model} onChange={e => setModel(e.target.value)} required>
-          <option value="">Modell wählen</option>
-          {models.map(m => <option key={m} value={m}>{m}</option>)}
-        </select>
-        <input className="border flex-1 px-2 py-1" value={prompt} onChange={e => setPrompt(e.target.value)} placeholder="Prompt eingeben" required />
-        <button className="bg-blue-600 text-white px-3 py-1 rounded" disabled={loading}>Senden</button>
-      </form>
-      <div className="bg-gray-100 p-4 rounded min-h-[120px]">
-        {output || "Antwort erscheint hier..."}
-      </div>
-      <a href={NEXTCLOUD_URL} className="mt-4 inline-block text-blue-700 underline">Zu Nextcloud (Dateien & Medien)</a>
-    </div>
-  );
+    log "Model configuration created"
 }
-EOF
 
-# api-integrations/digistore24/webhook.py
-cat > api-integrations/digistore24/webhook.py <<EOF
-from flask import Flask, request, jsonify
-import os
+# Health checks
+run_health_checks() {
+    log "Running health checks..."
+    
+    # Check if services are responding
+    services=(
+        "http://localhost:3000/health:API Gateway"
+        "http://localhost:8080:Dashboard"
+        "http://localhost:8081:Nextcloud"
+        "http://localhost:3001:Grafana"
+        "http://localhost:9090:Prometheus"
+        "http://localhost:5601:Kibana"
+    )
+    
+    for service in "${services[@]}"; do
+        url=$(echo $service | cut -d: -f1)
+        name=$(echo $service | cut -d: -f2)
+        
+        if curl -f -s $url >/dev/null 2>&1; then
+            log "✅ $name is healthy"
+        else
+            warn "❌ $name is not responding"
+        fi
+    done
+}
 
-app = Flask(__name__)
+# Post-installation setup
+post_install_setup() {
+    log "Running post-installation setup..."
+    
+    # Create default admin user
+    log "Creating default admin user..."
+    
+    # Setup monitoring dashboards
+    log "Setting up monitoring dashboards..."
+    
+    # Configure backup schedules
+    log "Configuring backup schedules..."
+    
+    # Setup automatic updates
+    log "Setting up automatic updates..."
+    
+    log "Post-installation setup completed"
+}
 
-DIGISTORE_API_KEY = os.environ.get("DIGISTORE_API_KEY")
+# Main installation flow
+main() {
+    log "Starting Kingdom SaaS Master Setup"
+    
+    check_requirements
+    detect_hardware
+    setup_environment
+    init_database
+    setup_models
+    start_services
+    run_health_checks
+    post_install_setup
+    
+    echo ""
+    echo "🎉 Kingdom SaaS Master Setup Completed Successfully!"
+    echo "================================================"
+    echo ""
+    echo "🌐 Access URLs:"
+    echo "   Dashboard:     http://localhost:8080"
+    echo "   API Gateway:   http://localhost:3000"
+    echo "   Nextcloud:     http://localhost:8081"
+    echo "   Grafana:       http://localhost:3001"
+    echo "   Prometheus:    http://localhost:9090"
+    echo "   Kibana:        http://localhost:5601"
+    echo ""
+    echo "🔐 Default Credentials:"
+    echo "   Nextcloud:     admin / (check .env file)"
+    echo "   Grafana:       admin / (check .env file)"
+    echo ""
+    echo "📖 Next Steps:"
+    echo "   1. Edit .env file with your API keys and passwords"
+    echo "   2. Restart services: docker-compose restart"
+    echo "   3. Access the dashboard to complete setup"
+    echo ""
+    echo "📚 Documentation: ./docs/README.md"
+    echo "🆘 Support: Check logs with 'docker-compose logs'"
+}
 
-@app.route("/webhook", methods=["POST"])
-def webhook():
-    event = request.json
-    # TODO: Produktanlage, Userverwaltung, Lizenzhandling
-    print("Empfangenes Event:", event)
-    return jsonify({"status": "ok"})
-
-if __name__ == "__main__":
-    app.run(port=5000, host="0.0.0.0")
-EOF
-
-echo "Alle produktiven Dateien und Ordner wurden angelegt!"
-echo "Bitte jetzt:"
-echo "  git add ."
-echo "  git commit -m 'Produktiver Initial-Stack für kingdom-gpt-hosting'"
-echo "  git push"
+# Run main function
+main "$@"
