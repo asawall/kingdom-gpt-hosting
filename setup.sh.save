@@ -16,7 +16,7 @@ SSH_PUBLIC_KEY="ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICVQcNlHdSf1syUSK71tiOzWXx5I
 GITHUB_SSH_PUBLIC_KEY="ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEOvwuA6Lj2UIyeqBvxvmPVBLt049lthVaM/wwNXACHp andreas@kingdom-hosting.de"
 
 # === GitHub Token ===
-GITHUB_PERSONAL_TOKEN=
+# GITHUB_TOKEN=PASTE_HERE
 
 # === MariaDB auf EX101 ===
 DB_HOST=localhost
@@ -38,7 +38,7 @@ DIGISTORE_API_KEY=live_xxx
 DIGISTORE_WEBHOOK_URL=https://dashboard.kingdom-hosting.de/api/digistore24/webhook
 
 # === SadTalker / Huggingface ===
-SADTALKER_TOKEN=fbLCLmJFGjPpqSqTyvXvjvqWxSDHRmEQcP
+# HUGGING_FACE_TOKEN=PASTE_HERE
 EOF
 
 # LICENSE (falls noch nicht vorhanden)
