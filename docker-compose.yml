@@ -1,0 +1,321 @@
+version: '3.8'
+
+services:
+  # Database Services
+  postgres:
+    image: postgres:15-alpine
+    container_name: kingdom-postgres
+    environment:
+      POSTGRES_DB: kingdom_saas
+      POSTGRES_USER: kingdom_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-kingdom_secure_pass_2024}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    networks:
+      - kingdom-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: kingdom-redis
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis_secure_pass_2024}
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    networks:
+      - kingdom-network
+
+  # Core API Services
+  api-gateway:
+    build:
+      context: ./services/api-gateway
+      dockerfile: Dockerfile
+    container_name: kingdom-api-gateway
+    environment:
+      - NODE_ENV=production
+      - JWT_SECRET=${JWT_SECRET:-super_secure_jwt_secret_2024}
+      - POSTGRES_URL=postgresql://kingdom_user:${POSTGRES_PASSWORD:-kingdom_secure_pass_2024}@postgres:5432/kingdom_saas
+      - REDIS_URL=redis://default:${REDIS_PASSWORD:-redis_secure_pass_2024}@redis:6379
+    ports:
+      - "3000:3000"
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+    networks:
+      - kingdom-network
+
+  user-service:
+    build:
+      context: ./services/user-service
+      dockerfile: Dockerfile
+    container_name: kingdom-user-service
+    environment:
+      - NODE_ENV=production
+      - POSTGRES_URL=postgresql://kingdom_user:${POSTGRES_PASSWORD:-kingdom_secure_pass_2024}@postgres:5432/kingdom_saas
+      - REDIS_URL=redis://default:${REDIS_PASSWORD:-redis_secure_pass_2024}@redis:6379
+      - JWT_SECRET=${JWT_SECRET:-super_secure_jwt_secret_2024}
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+    networks:
+      - kingdom-network
+
+  ai-orchestrator:
+    build:
+      context: ./services/ai-orchestrator
+      dockerfile: Dockerfile
+    container_name: kingdom-ai-orchestrator
+    environment:
+      - NODE_ENV=production
+      - POSTGRES_URL=postgresql://kingdom_user:${POSTGRES_PASSWORD:-kingdom_secure_pass_2024}@postgres:5432/kingdom_saas
+      - REDIS_URL=redis://default:${REDIS_PASSWORD:-redis_secure_pass_2024}@redis:6379
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - HUGGINGFACE_API_KEY=${HUGGINGFACE_API_KEY}
+    volumes:
+      - model_cache:/app/models
+      - ./config/models:/app/config/models
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+    networks:
+      - kingdom-network
+
+  # Local AI Model Services
+  llama-service:
+    build:
+      context: ./services/llama-service
+      dockerfile: Dockerfile
+    container_name: kingdom-llama-service
+    environment:
+      - MODEL_PATH=/models
+      - GPU_MEMORY_LIMIT=${GPU_MEMORY_LIMIT:-8GB}
+    volumes:
+      - model_cache:/models
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    restart: unless-stopped
+    networks:
+      - kingdom-network
+
+  # Frontend
+  dashboard:
+    build:
+      context: ./frontend/dashboard
+      dockerfile: Dockerfile
+    container_name: kingdom-dashboard
+    environment:
+      - REACT_APP_API_URL=http://api-gateway:3000
+      - REACT_APP_WS_URL=ws://api-gateway:3000
+    ports:
+      - "8080:80"
+    depends_on:
+      - api-gateway
+    restart: unless-stopped
+    networks:
+      - kingdom-network
+
+  # Third-party Integrations
+  nextcloud:
+    image: nextcloud:28-apache
+    container_name: kingdom-nextcloud
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_DB=nextcloud
+      - POSTGRES_USER=kingdom_user
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-kingdom_secure_pass_2024}
+      - NEXTCLOUD_ADMIN_USER=admin
+      - NEXTCLOUD_ADMIN_PASSWORD=${NEXTCLOUD_ADMIN_PASSWORD:-admin_secure_pass_2024}
+    volumes:
+      - nextcloud_data:/var/www/html
+      - ./config/nextcloud:/var/www/html/config
+    ports:
+      - "8081:80"
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    networks:
+      - kingdom-network
+
+  grafana:
+    image: grafana/grafana:10.0.0
+    container_name: kingdom-grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-grafana_secure_pass_2024}
+      - GF_DATABASE_TYPE=postgres
+      - GF_DATABASE_HOST=postgres:5432
+      - GF_DATABASE_NAME=grafana
+      - GF_DATABASE_USER=kingdom_user
+      - GF_DATABASE_PASSWORD=${POSTGRES_PASSWORD:-kingdom_secure_pass_2024}
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./config/grafana:/etc/grafana/provisioning
+    ports:
+      - "3001:3000"
+    depends_on:
+      - postgres
+      - prometheus
+    restart: unless-stopped
+    networks:
+      - kingdom-network
+
+  prometheus:
+    image: prom/prometheus:v2.45.0
+    container_name: kingdom-prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    volumes:
+      - prometheus_data:/prometheus
+      - ./config/prometheus:/etc/prometheus
+    ports:
+      - "9090:9090"
+    restart: unless-stopped
+    networks:
+      - kingdom-network
+
+  # Payment Service
+  payment-service:
+    build:
+      context: ./services/payment-service
+      dockerfile: Dockerfile
+    container_name: kingdom-payment-service
+    environment:
+      - NODE_ENV=production
+      - POSTGRES_URL=postgresql://kingdom_user:${POSTGRES_PASSWORD:-kingdom_secure_pass_2024}@postgres:5432/kingdom_saas
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    networks:
+      - kingdom-network
+
+  # Notification Services
+  email-service:
+    build:
+      context: ./services/email-service
+      dockerfile: Dockerfile
+    container_name: kingdom-email-service
+    environment:
+      - NODE_ENV=production
+      - POSTGRES_URL=postgresql://kingdom_user:${POSTGRES_PASSWORD:-kingdom_secure_pass_2024}@postgres:5432/kingdom_saas
+      - SMTP_HOST=${SMTP_HOST:-smtp.gmail.com}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+    networks:
+      - kingdom-network
+
+  webhook-service:
+    build:
+      context: ./services/webhook-service
+      dockerfile: Dockerfile
+    container_name: kingdom-webhook-service
+    environment:
+      - NODE_ENV=production
+      - POSTGRES_URL=postgresql://kingdom_user:${POSTGRES_PASSWORD:-kingdom_secure_pass_2024}@postgres:5432/kingdom_saas
+      - REDIS_URL=redis://default:${REDIS_PASSWORD:-redis_secure_pass_2024}@redis:6379
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+    networks:
+      - kingdom-network
+
+  # Backup Service
+  backup-service:
+    build:
+      context: ./services/backup-service
+      dockerfile: Dockerfile
+    container_name: kingdom-backup-service
+    environment:
+      - NODE_ENV=production
+      - POSTGRES_URL=postgresql://kingdom_user:${POSTGRES_PASSWORD:-kingdom_secure_pass_2024}@postgres:5432/kingdom_saas
+      - S3_BUCKET=${S3_BUCKET}
+      - S3_ACCESS_KEY=${S3_ACCESS_KEY}
+      - S3_SECRET_KEY=${S3_SECRET_KEY}
+      - S3_REGION=${S3_REGION:-us-east-1}
+    volumes:
+      - postgres_data:/backup/postgres:ro
+      - redis_data:/backup/redis:ro
+      - nextcloud_data:/backup/nextcloud:ro
+      - model_cache:/backup/models:ro
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    networks:
+      - kingdom-network
+
+  # Log Management
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.8.0
+    container_name: kingdom-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+    restart: unless-stopped
+    networks:
+      - kingdom-network
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.8.0
+    container_name: kingdom-kibana
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch
+    restart: unless-stopped
+    networks:
+      - kingdom-network
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.8.0
+    container_name: kingdom-logstash
+    volumes:
+      - ./config/logstash:/usr/share/logstash/pipeline
+    depends_on:
+      - elasticsearch
+    restart: unless-stopped
+    networks:
+      - kingdom-network
+
+volumes:
+  postgres_data:
+  redis_data:
+  nextcloud_data:
+  grafana_data:
+  prometheus_data:
+  elasticsearch_data:
+  model_cache:
+
+networks:
+  kingdom-network:
+    driver: bridge
